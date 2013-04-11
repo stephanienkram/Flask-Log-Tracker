@@ -1,0 +1,35 @@
+{% extends "layout.html" %}
+{% block body %}
+{% if session.logged_in %}
+
+<a href="{{url_for('show_logs')}}">Back to main</a>
+
+<form action="{{url_for('add_activity')}}" method=post class=add-entry>
+<dl>
+<dt>Name
+<dd><input type=text name=name>
+<dt>Difficulty
+<dd><select name=difficulty>
+<option value=1>Very Easy</option>
+<option value=2>Moderate</option>
+<option value=4>Hard</option>
+</select>
+<dt>Sessions
+<dd><select name=sessions>
+<option value=m>Minutes</option>
+<option value=s>Sessions</option>
+</select>
+<dd><input type=submit value="Create New Activity">
+</dl>
+</form>
+{% endif %}
+
+<ul class=entries>
+{% for a in activities %}
+<!--  will eventually link to individual pages that will list all logs/activities...?? for each activity -->
+<li>{{a.name}}</li>
+{% else %}
+There's nothing here!
+{% endfor %}
+</ul>
+{% endblock %}
