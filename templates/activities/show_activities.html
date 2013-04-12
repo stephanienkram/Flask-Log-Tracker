@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+{% block body %}
+{% if session.logged_in %}
+
+<ul class=entries>
+{% for a in activities %}
+<!--  will eventually link to individual pages that will list all logs/activities...?? for each activity -->
+<li><a href="/activity/{{a.id}}">{{a.name}}</a></li>
+{% else %}
+There's nothing here!
+{% endfor %}
+</ul>
+
+
+<form action="{{url_for('add_activity')}}" method=post class=add-entry>
+<b>Name:</b> <input type=text name=name>
+<b>Skill: </b><select name=skill>
+{% for s in skills %}
+<option value='{{s.id}}'>{{s.name.capitalize()}}</option>
+{% endfor %}
+</select>
+
+<b>Sessions:</b> <select id=sessions name=sessions>
+<option value=m>Minutes</option>
+<option value=s>Sessions</option>
+</select>
+
+<div id=mDiff>
+<b>Difficulty:</b> <select name=difficulty>
+<option value=3>Very Easy</option>
+<option value=5>Moderate</option>
+<option value=7>Hard</option>
+</select>
+</div>
+
+<div id=sDiff>
+<b>Points:</b> <select name=difficulty>
+<option value=25>25</option>
+<option value=50>50</option>
+<option value=100>100</option>
+</select>
+</div>
+
+<input type=submit value="Create New Activity">
+</form>
+
+<span id=jsTest></span>
+
+<script>
+//cache the select and span elements
+var mySelect = document.getElementById("sessions");
+
+var m = document.getElementById('mDiff')
+var s = document.getElementById("sDiff");
+s.style.display = 'none';
+
+
+//when it changes
+mySelect.onchange = function() {
+       //change the tag innerHTML checking the selected value of the select
+       if (mySelect.value==='m'){
+    	   m.style.display = 'block';
+    	   s.style.display = 'none';
+       } else {
+    	   s.style.display = 'block';
+    	   m.style.display = 'none';
+       }
+}
+
+</script>
+
+{% endif %}
+
+
+{% endblock %}

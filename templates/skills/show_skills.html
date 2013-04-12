@@ -1,0 +1,21 @@
+{% extends "layout.html" %}
+{% block body %}
+{% if session.logged_in %}
+
+<ul class=entries>
+{% for s in skills %}
+<li><a href="/skill/{{s.id}}">{{s.name}}</a></li>
+{% else %}
+There's nothing here!
+{% endfor %}
+</ul>
+
+
+<form action="{{url_for('add_skill')}}" method=post class=add-entry>
+<b>Name:</b> <input type=text name=name>
+<input type=submit value="Create New Skill">
+</form>
+{% endif %}
+
+
+{% endblock %}

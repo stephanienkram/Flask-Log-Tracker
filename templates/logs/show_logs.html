@@ -1,0 +1,93 @@
+{% extends "layout.html" %}
+{% block body %}
+{% if session.logged_in %}
+
+<table class=datebox>
+<tr><td><a href="{{url_for('show_logs') + '?date=' + yesterday}}"><b>Yesterday</b></a></td> 
+<td><b>{{day}}</b></td>
+<td><a href="{{url_for('show_logs') + '?date=' + tomorrow}}"><b>Tomorrow</b></a></td>
+</table>
+
+<table class=logbox>
+<!--  NEEDS TONS OF FIXING -->
+{% for l in logs %}
+<tr><td>{{get_activity_name(l.activity_id).capitalize()}}</td>
+<td>Activity name will go here</td>
+<td>{% if get_activity_sessions(l.activity_id)=='m' %} {{l.time}} minutes {% endif %}</td>
+<td>{{l.exp}}</td></tr>
+{% else %}
+There's nothing here!
+{% endfor %}
+</table>
+
+{% if addTrue %}
+<form action="{{url_for('add_log')}}" method=post class=add-entry>
+<dl>
+
+<div id=skill>
+<b>Skill:</b>
+<select name=activity onChange='ajaxFunction()' id='activity'>
+<option></option>
+{% for s in skills %}
+<option value={{s.id}}>{{s.name.capitalize()}}</option>
+{% endfor %}
+</select>
+</div>
+
+<span id=activities></span>
+
+<!--  grabs skill activities dynamically (hopefully) -->
+<script>
+<!-- 
+//Browser Support Code
+function ajaxFunction(){
+    var ajaxRequest;  // The variable that makes Ajax possible!
+    var select = document.getElementById("activity");
+    var s_id = select.value;
+    
+    try{
+        // Opera 8.0+, Firefox, Safari
+        ajaxRequest = new XMLHttpRequest();
+    } catch (e){
+        // Internet Explorer Browsers
+        try{
+            ajaxRequest = new ActiveXObject("Msxml2.XMLHTTP");
+        } catch (e) {
+            try{
+                ajaxRequest = new ActiveXObject("Microsoft.XMLHTTP");
+            } catch (e){
+                // Something went wrong
+                alert("Your browser broke!");
+                return false;
+            }
+        }
+    }
+    ajaxRequest.onreadystatechange = function(){
+    	if(ajaxRequest.readyState==4 && ajaxRequest.status==200){
+    		/*document.getElementById('activities').innerHTML = ajaxRequest.responseText;*/
+    		var result = JSON.parse(ajaxRequest.responseText);
+    		var string = '<b>Activity</b>: <select name="activity">';
+    		for (k in result){
+    			string += "<option value="+k+">"+result[k]+"</option>";
+    		}
+    		string += "</select>"
+    		document.getElementById('activities').innerHTML = string;
+    	}
+    }
+    
+    ajaxRequest.open("GET", "/web_request/" + s_id, true);
+    ajaxRequest.send(null);
+}
+
+//-->
+</script>
+
+<b>Time:</b><input type=text name=time><input type=submit name="Log this">
+</form>
+
+{% endif %}
+
+{% endif %}
+
+
+{% endblock %}
