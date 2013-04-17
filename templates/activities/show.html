@@ -1,4 +1,9 @@
 {% extends 'layout.html' %}
 {% block body %}
-{{ activity.name }}
+<h4>{{ skill.name }} > {{ activity.name }}</h4>
+
+{% for l in logs %}
+{{ l.date }}
+{% endfor %}
+
 {% endblock %}

@@ -15,18 +15,23 @@ There's nothing here!
 <form action="{{url_for('add_activity')}}" method=post class=add-entry>
 <b>Name:</b> <input type=text name=name>
 <b>Skill: </b><select name=skill>
+<option></option>
 {% for s in skills %}
 <option value='{{s.id}}'>{{s.name.capitalize()}}</option>
 {% endfor %}
 </select>
 
 <b>Sessions:</b> <select id=sessions name=sessions>
+<option></option>
 <option value=m>Minutes</option>
 <option value=s>Sessions</option>
 </select>
 
-<div id=mDiff>
-<b>Difficulty:</b> <select name=difficulty>
+<div id=difficulty><input type=hidden name=difficulty value=''></div>
+
+<!-- <div id=mDiff>
+<b>Difficulty:</b> <select name=mDiff>
+<option></option>
 <option value=3>Very Easy</option>
 <option value=5>Moderate</option>
 <option value=7>Hard</option>
@@ -34,12 +39,13 @@ There's nothing here!
 </div>
 
 <div id=sDiff>
-<b>Points:</b> <select name=difficulty>
+<b>Points per Session:</b> <select name=sDiff>
+<option></option>
 <option value=25>25</option>
 <option value=50>50</option>
 <option value=100>100</option>
 </select>
-</div>
+</div> -->
 
 <input type=submit value="Create New Activity">
 </form>
@@ -50,20 +56,27 @@ There's nothing here!
 //cache the select and span elements
 var mySelect = document.getElementById("sessions");
 
-var m = document.getElementById('mDiff')
-var s = document.getElementById("sDiff");
-s.style.display = 'none';
+/* var m = document.getElementById('mDiff')
+var s = document.getElementById("sDiff"); */
+/* s.style.display = 'none'; */
+
+var d = document.getElementById('difficulty')
+
+var mText = "<b>Difficulty:</b> <select name=difficulty><option></option><option value=3>Very Easy</option><option value=5>Moderate</option><option value=7>Hard</option></select>";
+var sText = "<b>Points per Session:</b> <select name=sDiff><option></option><option value=25>25</option><option value=50>50</option><option value=100>100</option></select>"
 
 
 //when it changes
 mySelect.onchange = function() {
        //change the tag innerHTML checking the selected value of the select
        if (mySelect.value==='m'){
-    	   m.style.display = 'block';
-    	   s.style.display = 'none';
+    	   d.innerHTML=mText;
+    	   /* m.style.display = 'block';
+    	   s.style.display = 'none'; */
        } else {
-    	   s.style.display = 'block';
-    	   m.style.display = 'none';
+    	   d.innerHTML=sText;
+    	   /* s.style.display = 'block';
+    	   m.style.display = 'none'; */
        }
 }
 

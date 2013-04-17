@@ -24,15 +24,13 @@ There's nothing here!
 <form action="{{url_for('add_log')}}" method=post class=add-entry>
 <dl>
 
-<div id=skill>
 <b>Skill:</b>
-<select name=activity onChange='ajaxFunction()' id='activity'>
+<select name=skill onChange='getActivities()' id="skill">
 <option></option>
 {% for s in skills %}
 <option value={{s.id}}>{{s.name.capitalize()}}</option>
 {% endfor %}
 </select>
-</div>
 
 <span id=activities></span>
 
@@ -40,9 +38,9 @@ There's nothing here!
 <script>
 <!-- 
 //Browser Support Code
-function ajaxFunction(){
+function getActivities(){
     var ajaxRequest;  // The variable that makes Ajax possible!
-    var select = document.getElementById("activity");
+    var select = document.getElementById("skill");
     var s_id = select.value;
     
     try{
@@ -66,7 +64,8 @@ function ajaxFunction(){
     	if(ajaxRequest.readyState==4 && ajaxRequest.status==200){
     		/*document.getElementById('activities').innerHTML = ajaxRequest.responseText;*/
     		var result = JSON.parse(ajaxRequest.responseText);
-    		var string = '<b>Activity</b>: <select name="activity">';
+    		var string = '<b>Activity</b>: <select name="activity" onChange="getActivityInfo()" id="activity">';
+    		string += "<option></option>";
     		for (k in result){
     			string += "<option value="+k+">"+result[k]+"</option>";
     		}
@@ -75,14 +74,63 @@ function ajaxFunction(){
     	}
     }
     
-    ajaxRequest.open("GET", "/web_request/" + s_id, true);
+
+    ajaxRequest.open("GET", "/fetch_all_activities/" + s_id, true);
+    ajaxRequest.send(null);
+}
+
+</script>
+
+<span id=time><b>Time:</b><input type=text name=time></span>
+<span id=submit><input type=submit name="Log this"></span>
+
+<script>
+<!--
+
+var t = document.getElementById("time");
+t.style.display = 'none';
+var s = document.getElementById('submit');
+s.style.display = 'none';
+
+function getActivityInfo(){
+    var ajaxRequest;  // The variable that makes Ajax possible!
+    var select = document.getElementById("skill");
+    var a_id = select.value;    
+    try{
+        // Opera 8.0+, Firefox, Safari
+        ajaxRequest = new XMLHttpRequest();
+    } catch (e){
+        // Internet Explorer Browsers
+        try{
+            ajaxRequest = new ActiveXObject("Msxml2.XMLHTTP");
+        } catch (e) {
+            try{
+                ajaxRequest = new ActiveXObject("Microsoft.XMLHTTP");
+            } catch (e){
+                // Something went wrong
+                alert("Your browser broke!");
+                return false;
+            }
+        }
+    }
+    ajaxRequest.onreadystatechange = function(){
+        if(ajaxRequest.readyState==4 && ajaxRequest.status==200){
+        	var activity = JSON.parse(ajaxRequest.responseText);
+        	if (activity['sessions']==='m'){
+        		t.style.display = 'block';
+        	}
+        	s.style.display = 'block';
+        	
+        }
+    }
+    
+    ajaxRequest.open("GET", "/fetch_one_activity/" + a_id, true);
     ajaxRequest.send(null);
 }
 
 //-->
 </script>
 
-<b>Time:</b><input type=text name=time><input type=submit name="Log this">
 </form>
 
 {% endif %}
