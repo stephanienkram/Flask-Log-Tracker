@@ -1,0 +1,9 @@
+{% extends 'layout.html' %}
+{% block body %}
+<h4>{{ skill.name.capitalize() }}</h4>
+
+{% for a in activities %}
+<a href="/activity/{{a.id}}">{{a.name.capitalize()}}</a>
+{% endfor %}
+
+{% endblock %}

@@ -4,7 +4,7 @@
 
 <ul class=entries>
 {% for s in skills %}
-<li><a href="/skill/{{s.id}}">{{s.name}}</a></li>
+<li><a href="/skill/{{s.id}}">{{s.name.capitalize()}}</a></li>
 {% else %}
 There's nothing here!
 {% endfor %}

@@ -4,15 +4,16 @@
 
 <table class=datebox>
 <tr><td><a href="{{url_for('show_logs') + '?date=' + yesterday}}"><b>Yesterday</b></a></td> 
-<td><b>{{day}}</b></td>
+<td><b>{{day}}</b> {% if today %} (today) {% endif %}</td>
 <td><a href="{{url_for('show_logs') + '?date=' + tomorrow}}"><b>Tomorrow</b></a></td>
 </table>
 
 <table class=logbox>
 <!--  NEEDS TONS OF FIXING -->
 {% for l in logs %}
-<tr><td>{{get_activity_name(l.activity_id).capitalize()}}</td>
-<td>Activity name will go here</td>
+<tr>
+<td>{{get_skill_name(l.activity_id).capitalize()}}</td>
+<td>{{get_activity_name(l.activity_id).capitalize()}}</td>
 <td>{% if get_activity_sessions(l.activity_id)=='m' %} {{l.time}} minutes {% endif %}</td>
 <td>{{l.exp}}</td></tr>
 {% else %}
@@ -34,7 +35,7 @@ There's nothing here!
 
 <span id=activities></span>
 
-<!--  grabs skill activities dynamically (hopefully) -->
+<!--  GRABS LIST OF SKILLS -->
 <script>
 <!-- 
 //Browser Support Code
@@ -66,8 +67,8 @@ function getActivities(){
     		var result = JSON.parse(ajaxRequest.responseText);
     		var string = '<b>Activity</b>: <select name="activity" onChange="getActivityInfo()" id="activity">';
     		string += "<option></option>";
-    		for (k in result){
-    			string += "<option value="+k+">"+result[k]+"</option>";
+    		for (var k in result){
+    			string += "<option value='"+k+"'>"+result[k]+"</option>";
     		}
     		string += "</select>"
     		document.getElementById('activities').innerHTML = string;
@@ -81,20 +82,23 @@ function getActivities(){
 
 </script>
 
-<span id=time><b>Time:</b><input type=text name=time></span>
+<span id=time><input type=hidden name=time value='none'></span>
 <span id=submit><input type=submit name="Log this"></span>
 
+
+<!-- GRABS DATA FOR INDIVIDUAL SKILL -->
 <script>
 <!--
 
 var t = document.getElementById("time");
-t.style.display = 'none';
+var tText = '<b>Time:</b><input type=text name=time>';
+
 var s = document.getElementById('submit');
 s.style.display = 'none';
 
 function getActivityInfo(){
     var ajaxRequest;  // The variable that makes Ajax possible!
-    var select = document.getElementById("skill");
+    var select = document.getElementById("activity");
     var a_id = select.value;    
     try{
         // Opera 8.0+, Firefox, Safari
@@ -117,13 +121,13 @@ function getActivityInfo(){
         if(ajaxRequest.readyState==4 && ajaxRequest.status==200){
         	var activity = JSON.parse(ajaxRequest.responseText);
         	if (activity['sessions']==='m'){
-        		t.style.display = 'block';
+        		t.innerHTML = tText;
         	}
         	s.style.display = 'block';
         	
         }
     }
-    
+
     ajaxRequest.open("GET", "/fetch_one_activity/" + a_id, true);
     ajaxRequest.send(null);
 }

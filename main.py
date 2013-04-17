@@ -102,6 +102,7 @@ def logout():
 @app.route('/')
 def show_logs():
     addTrue = False
+    today = False
     if 'date' in request.args:
         date = datetime.datetime.strptime(request.args['date'], "%Y-%m-%d").date()
     else:
@@ -109,6 +110,7 @@ def show_logs():
     
     if date == datetime.date.today():
         addTrue = True
+        today = True
     if date == datetime.date.today() - datetime.timedelta(days=1):
         addTrue = True
     
@@ -117,7 +119,7 @@ def show_logs():
     day = date.strftime("%A, %B %e, %G")
     logs = g.db.execute("SELECT * FROM logs WHERE date='%s' ORDER BY id desc" % date)
     skills = g.db.execute("SELECT DISTINCT id, name FROM skills")
-    return render_template('logs/show_logs.html', logs=logs, skills=skills, day=day, addTrue=addTrue, yesterday=str(yesterday), tomorrow=str(tomorrow))
+    return render_template('logs/show_logs.html', logs=logs, skills=skills, day=day, addTrue=addTrue, today=today, yesterday=str(yesterday), tomorrow=str(tomorrow))
 
 @app.route('/addLogs', methods=['POST'])
 @login_required
@@ -144,9 +146,7 @@ def add_log():
 @app.route('/activities')
 def show_activities():
     activities = g.db.execute("SELECT DISTINCT id, name FROM activities")
-#     activities = [dict(id=row[0], name=row[1]) for row in a.fetchall()]
     skills = g.db.execute("SELECT DISTINCT id, name FROM skills")
-#     skills = [dict(id=row[0], name=row[1]) for row in s.fetchall()]
     return render_template('activities/show_activities.html', activities=activities, skills=skills)
 
 @app.route('/activity/<a_id>')
@@ -155,7 +155,6 @@ def show_a(a_id=None):
     if a_id==None:
         redirect(url_for('activities'))
     activities = g.db.execute("SELECT id, name, skill_id FROM activities WHERE id = %s" % a_id)
-#     activities = [dict(id=row[0], name=row[1]) for row in a.fetchall()]
     a = activities.fetchone()
     app.logger.info("Showing activity: %s" % a)
     skills = g.db.execute("SELECT * FROM skills WHERE id=%s" % a['skill_id'])
@@ -204,7 +203,6 @@ def add_activity():
 @app.route('/skills')
 def show_skills():
     skills = g.db.execute("SELECT DISTINCT id, name FROM skills")
-#     skills = [dict(id=row[0], name=row[1]) for row in s.fetchall()]
     return render_template('skills/show_skills.html', skills=skills)
 
 @app.route('/skill/<s_id>')
@@ -213,8 +211,9 @@ def show_s(s_id=None):
     if s_id==None:
         redirect(url_for('skills'))
     skills = g.db.execute("SELECT id, name FROM skills WHERE id = %s" % s_id)
-#     skills = [dict(id=row[0], name=row[1]) for row in s.fetchall()]
-    return render_template('skills/show.html', skils=skills[0])
+    s = skills.fetchone()
+    activities = g.db.execute("SELECT * FROM activities WHERE skill_id = %s" % s['id'])
+    return render_template('skills/show.html', skill=s, activities=activities.fetchall())
 
 @app.route('/addSkills', methods=['POST'])
 @login_required
@@ -242,18 +241,23 @@ def add_skill():
 
 
 '''HELPERS'''
-def get_activity_name(id):
-    a = g.db.execute('SELECT name FROM activities WHERE id=%s' %id)
-#     a = [dict(name=row[0]) for row in n.fetchall()]
+def get_activity_name(a_id):
+    a = g.db.execute('SELECT name FROM activities WHERE id=%s' %a_id)
     return a.fetchone()['name']
     
-def get_activity_sessions(id):
-    a = g.db.execute('SELECT sessions FROM activities WHERE id=%s' %id)
-#     a = [dict(sessions=row[0]) for row in s.fetchall()]
+def get_activity_sessions(a_id):
+    a = g.db.execute('SELECT sessions FROM activities WHERE id=%s' %a_id)
     return a.fetchone()['sessions']
+
+def get_skill_name(a_id):
+    a = g.db.execute('SELECT skill_id FROM activities WHERE id=%s' %a_id)
+    skill_id = a.fetchone()['skill_id']
+    s = g.db.execute('SELECT name FROM skills WHERE id=%s' %skill_id)
+    return s.fetchone()['name']
 
 app.jinja_env.globals.update(get_activity_name=get_activity_name)
 app.jinja_env.globals.update(get_activity_sessions=get_activity_sessions)
+app.jinja_env.globals.update(get_skill_name=get_skill_name)
 
 
 
@@ -264,11 +268,10 @@ def fetch_all_activities(s_id=None):
     app.logger.info("Getting activities where skill_id = %s" % s_id)
     string = 'SELECT * FROM activities WHERE skill_id = %s' % s_id
     activities = g.db.execute('SELECT * FROM activities WHERE skill_id = ?', [s_id])
-#     activities = [dict(id=row[0], skill_id=row[1], name=row[2], sessions=row[3], difficulty=row[4]) for row in a.fetchall()]
     d = {}
     for a in activities:
         d[str(a['id'])] = str(a['name'])
-    app.logger.info("Activities: %s" % d)
+    app.logger.info("All activities through ajax: %s" % d)
     d = str(d).replace('\'', '\"')
     return d
 
@@ -276,14 +279,13 @@ def fetch_all_activities(s_id=None):
 def fetch_one_activity(a_id=None):
     app.logger.info("Getting activity where activity_id = %s" % a_id)
     activities = g.db.execute('SELECT * FROM activities WHERE id=?', [a_id])
-#     activities = [dict(id=str(row[0]), skill_id=str(row[1]), name=str(row[2]), sessions=str(row[3]), difficulty=str(row[4])) for row in a.fetchall()]
     d = {}
     a = activities.fetchone()
     app.logger.info(a)
     for k, v in a.iteritems():
         d[str(k)]=str(v)
     d = str(d).replace('\'', '\"')
-    app.logger.info("Activity info: %s" % d)
+    app.logger.info("Activity info through ajax with id %s: %s" % (a_id, d))
     return d
 
 if __name__ == '__main__':

@@ -1,9 +1,9 @@
 {% extends 'layout.html' %}
 {% block body %}
-<h4>{{ skill.name }} > {{ activity.name }}</h4>
+<h4>{{ skill.name.capitalize() }} > {{ activity.name.capitalize() }}</h4>
 
 {% for l in logs %}
-{{ l.date }}
+{{ l.date }}{% if get_activity_sessions(l.activity_id)=='m' %}: {{l.time}} minutes {% endif %}
 {% endfor %}
 
 {% endblock %}
