@@ -130,7 +130,13 @@ def add_log():
         if time=='' or request.form['activity']=='':
             raise MissingParamException
         ''' calculate experience points!'''
-        g.db.execute('INSERT INTO logs (activity_id, date, time, exp) VALUES (?, ?, ?, ?)', [request.form['activity'], str(datetime.date.today()), time, 0])
+        activities = g.db.execute('SELECT * FROM activities WHERE id = %s' % request.form['activity'])
+        a = activities.fetchone()
+        if a['sessions'] == 'm':
+            exp = a['difficulty'] * int(time)
+        else:
+            exp = a['difficulty']
+        g.db.execute('INSERT INTO logs (activity_id, date, time, exp) VALUES (?, ?, ?, ?)', [request.form['activity'], str(datetime.date.today()), time, exp])
         g.db.commit()
         flash('New entry was successfully posted!')
         return redirect(url_for('show_logs'))

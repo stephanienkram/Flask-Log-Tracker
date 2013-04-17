@@ -10,5 +10,5 @@ A personal tracker that gamifies some aspects of personal development and goal r
 + [X] View and modify yesterday's logs
 + [X] View and add activities
 + [ ] Daily feedback quiz
-+ [ ] Experience points per log
++ [X] Experience points per log
 + [ ] User levels up
