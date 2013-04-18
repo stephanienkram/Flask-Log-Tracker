@@ -1,1 +1,1 @@
-web: gunicorn show_logs:app
+web: gunicorn main:app

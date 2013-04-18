@@ -1,11 +1,11 @@
-/*drop table if exists users;
+drop table if exists users;
 create table users (
 id integer primary key autoincrement,
 name string not null,
 password string not null,
 level integer not null,
 exp integer not null
-);*/
+);
 
 drop table if exists skills;
 create table skills (

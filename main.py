@@ -119,7 +119,16 @@ def show_logs():
     day = date.strftime("%A, %B %e, %G")
     logs = g.db.execute("SELECT * FROM logs WHERE date='%s' ORDER BY id desc" % date)
     skills = g.db.execute("SELECT DISTINCT id, name FROM skills")
-    return render_template('logs/show_logs.html', logs=logs, skills=skills, day=day, addTrue=addTrue, today=today, yesterday=str(yesterday), tomorrow=str(tomorrow))
+    users = g.db.execute("SELECT * FROM users WHERE id=%s" % 1)
+    user = users.fetchone()
+    app.logger.info(user)
+    if user is None:
+        g.db.execute("INSERT INTO users (id, name, password, level, exp) VALUES (1, 'admin', 'password', 1, 0)")
+        g.db.commit()
+        users = g.db.execute("SELECT * FROM users WHERE id=%s" % 1)
+        user = users.fetchone()
+        app.logger.info(user)
+    return render_template('logs/show_logs.html', users=user, logs=logs, skills=skills, day=day, addTrue=addTrue, today=today, yesterday=str(yesterday), tomorrow=str(tomorrow))
 
 @app.route('/addLogs', methods=['POST'])
 @login_required
@@ -136,6 +145,13 @@ def add_log():
             exp = a['difficulty'] * int(time)
         else:
             exp = a['difficulty']
+        
+        users = g.db.execute("SELECT * FROM users WHERE id=%s" % 1)
+        user = users.fetchone()
+        user['exp'] += exp
+        g.db.execute("UPDATE users SET exp=? WHERE id=?", (user['exp'], user['id']))
+        g.db.commit()
+        checkLevelUp()
         g.db.execute('INSERT INTO logs (activity_id, date, time, exp) VALUES (?, ?, ?, ?)', [request.form['activity'], str(datetime.date.today()), time, exp])
         g.db.commit()
         flash('New entry was successfully posted!')
@@ -153,7 +169,16 @@ def add_log():
 def show_activities():
     activities = g.db.execute("SELECT DISTINCT id, name FROM activities")
     skills = g.db.execute("SELECT DISTINCT id, name FROM skills")
-    return render_template('activities/show_activities.html', activities=activities, skills=skills)
+    users = g.db.execute("SELECT * FROM users WHERE id=%s" % 1)
+    user = users.fetchone()
+    app.logger.info(user)
+    if user is None:
+        g.db.execute("INSERT INTO users (id, name, password, level, exp) VALUES (1, 'admin', 'password', 1, 0)")
+        g.db.commit()
+        users = g.db.execute("SELECT * FROM users WHERE id=%s" % 1)
+        user = users.fetchone()
+        app.logger.info(user)
+    return render_template('activities/show_activities.html', users=user, activities=activities, skills=skills)
 
 @app.route('/activity/<a_id>')
 def show_a(a_id=None):
@@ -209,7 +234,16 @@ def add_activity():
 @app.route('/skills')
 def show_skills():
     skills = g.db.execute("SELECT DISTINCT id, name FROM skills")
-    return render_template('skills/show_skills.html', skills=skills)
+    users = g.db.execute("SELECT * FROM users WHERE id=%s" % 1)
+    user = users.fetchone()
+    app.logger.info(user)
+    if user is None:
+        g.db.execute("INSERT INTO users (id, name, password, level, exp) VALUES (1, 'admin', 'password', 1, 0)")
+        g.db.commit()
+        users = g.db.execute("SELECT * FROM users WHERE id=%s" % 1)
+        user = users.fetchone()
+        app.logger.info(user)
+    return render_template('skills/show_skills.html', users=user, skills=skills)
 
 @app.route('/skill/<s_id>')
 def show_s(s_id=None):
@@ -247,6 +281,31 @@ def add_skill():
 
 
 '''HELPERS'''
+def checkLevelUp():
+    users = g.db.execute("SELECT * FROM users WHERE id=%s" % 1)
+    user = users.fetchone()
+    level = user['level']
+    app.logger.info("Checking if level %s user levels up" % level)
+    ''' create level guide'''
+    total = 100
+    diff = 0
+    import math
+    l = [0, 0, 100]
+    for i in range(100):
+        diff = round(125 + math.pow(2.0, (i/2.0)))
+        total += diff
+        l.append(total)
+    
+    app.logger.info("Current exp: %s, Exp req for level up: %s" % (user['exp'], l[level+1]))
+        
+    if user['exp'] > l[level+1]:
+        user['level'] += 1
+        app.logger.info('Level up! Move from levels %s => %s' % (level, level+1))
+        
+    g.db.execute("UPDATE users SET level=? WHERE id=?", (user['level'], user['id']))
+    g.db.commit()
+        
+    
 def get_activity_name(a_id):
     a = g.db.execute('SELECT name FROM activities WHERE id=%s' %a_id)
     return a.fetchone()['name']
