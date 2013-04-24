@@ -2,6 +2,10 @@
 {% block body %}
 <h4>{{ skill.name.capitalize() }}</h4>
 
+<form action='/delete_skill/{{skill.id}}' method='post'>
+<input type='submit' id='delete' onClick="return confirm('Are you sure?');" value='Delete'>
+</form>
+
 {% for a in activities %}
 <a href="/activity/{{a.id}}">{{a.name.capitalize()}}</a>
 {% endfor %}

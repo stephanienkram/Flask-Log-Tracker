@@ -9,13 +9,13 @@
 </table>
 
 <table class=logbox>
-<!--  NEEDS TONS OF FIXING -->
 {% for l in logs %}
 <tr>
 <td>{{get_skill_name(l.activity_id).capitalize()}}</td>
 <td>{{get_activity_name(l.activity_id).capitalize()}}</td>
 <td>{% if get_activity_sessions(l.activity_id)=='m' %} {{l.time}} minutes {% endif %}</td>
-<td>{{l.exp}}</td></tr>
+<td>{{l.exp}}</td>
+{% if addTrue %}<td><form action='/delete_log/{{l.id}}' method='post'><input type='submit' id='delete' onClick="return confirm('Are you sure?');" value='Delete'></form></td>{% endif %}</tr>
 {% else %}
 There's nothing here!
 {% endfor %}

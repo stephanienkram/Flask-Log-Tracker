@@ -11,7 +11,8 @@ drop table if exists skills;
 create table skills (
 id integer primary key autoincrement,
 user_id integer not null,
-name string not null
+name string not null,
+active integer not null
 );
 
 drop table if exists activities;
@@ -20,7 +21,8 @@ id integer primary key autoincrement,
 skill_id integer not null,
 name string not null,
 sessions string not null,
-difficulty integer not null
+difficulty integer not null,
+active integer not null
 );
 
 drop table if exists logs;
