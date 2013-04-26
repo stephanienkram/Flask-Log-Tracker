@@ -59,12 +59,15 @@ def teardown_request(exception):
 def login_required(test):
     @wraps(test)
     def wrap(*args, **kwargs):
-        u = g.db.execute("SELECT * FROM users WHERE id=%s" %session['user_id'])
-        user = u.fetchone()
-        if 'logged_in' in session and 'user_id' in session and user is not None:
-            return test(*args, **kwargs)
-        else:
-            flash('You need to login')
+        try:
+            u = g.db.execute("SELECT * FROM users WHERE id=%s" %session['user_id'])
+            user = u.fetchone()
+            if 'logged_in' in session and 'user_id' in session and user is not None:
+                return test(*args, **kwargs)
+            else:
+                flash('You need to login')
+                return redirect(url_for('login'))
+        except:
             return redirect(url_for('login'))
     return wrap
 
