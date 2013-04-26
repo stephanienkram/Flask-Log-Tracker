@@ -1,9 +1,10 @@
 {% extends 'layout.html' %}
 {% block body %}
-<h4>{{ skill.name.capitalize() }}</h4>
+<h3>{{ skill.name.capitalize() }}</h3>
+<h4>Level {{skill.level}} ({{skill.exp}})</h4>
 
 <form action='/delete_skill/{{skill.id}}' method='post'>
-<input type='submit' id='delete' onClick="return confirm('Are you sure?');" value='Delete'>
+<input type='submit' onClick="return confirm('Are you sure?');" value='Delete'>
 </form>
 
 {% for a in activities %}

@@ -3,7 +3,7 @@
 <h4>{{ skill.name.capitalize() }} > {{ activity.name.capitalize() }}</h4>
 
 <form action='/delete_activity/{{activity.id}}' method='post'>
-<input type='submit' id='delete' onClick="return confirm('Are you sure?');" value='Delete'>
+<input type='submit' onClick="return confirm('Are you sure?');" value='Delete'>
 </form>
 
 {% for l in logs %}

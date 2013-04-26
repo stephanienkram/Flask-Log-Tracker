@@ -59,7 +59,9 @@ def teardown_request(exception):
 def login_required(test):
     @wraps(test)
     def wrap(*args, **kwargs):
-        if 'logged_in' in session and 'user_id' in session:
+        u = g.db.execute("SELECT * FROM users WHERE id=%s" %session['user_id'])
+        user = u.fetchone()
+        if 'logged_in' in session and 'user_id' in session and user is not None:
             return test(*args, **kwargs)
         else:
             flash('You need to login')
@@ -81,8 +83,10 @@ def login():
         u = g.db.execute("SELECT * FROM users WHERE name=?", [request.form['username']])
         user = u.fetchone()
         app.logger.info("user login attempt: %s" % user)
-        if len(user) == 0:
+        if user==None:
             error = 'Invalid username'
+            flash('Invalid username')
+            return redirect(url_for('login'))
         if request.form['password'] != user['password']:
             error = 'Invalid password'
         else:
@@ -126,6 +130,8 @@ def add_user():
         return redirect(url_for('login'))
 
 
+
+
 '''LOGS'''    
 @app.route('/')
 @login_required
@@ -148,8 +154,8 @@ def show_logs():
     day = date.strftime("%A, %B %e, %G")
     app.logger.info(session.__dict__)
     logs = g.db.execute("SELECT * FROM logs WHERE date='%s' AND user_id=%s ORDER BY id desc" % (date, session['user_id']))
-    skills = g.db.execute("SELECT * FROM skills WHERE active=1 AND user_id=%s" % session['user_id'])
     
+    skills = getAllSkills()
     user = getUser()
 
     return render_template('logs/show_logs.html', users=user, logs=logs, skills=skills, day=day, addTrue=addTrue, today=today, yesterday=str(yesterday), tomorrow=str(tomorrow))
@@ -163,21 +169,25 @@ def add_log():
         if time=='' or request.form['activity']=='':
             raise MissingParamException
         ''' calculate experience points!'''
-        activities = g.db.execute('SELECT * FROM activities WHERE id = %s AND user_id = %s' % (request.form['activity'], session['user_id']))
-        a = activities.fetchone()
+        a = getOneActivity(request.form['activity'])
         if a['sessions'] == 'm':
             exp = a['difficulty'] * int(time)
         else:
             exp = a['difficulty']
         
-        users = g.db.execute("SELECT * FROM users WHERE id=%s" % (session['user_id']))
-        user = users.fetchone()
-        user['exp'] += exp
-        g.db.execute("UPDATE users SET exp=? WHERE id=?", [user['exp'], user['id']])
-        g.db.commit()
-        checkLevelUp()
+        ''' insert log into db'''    
         g.db.execute('INSERT INTO logs (activity_id, date, time, exp, user_id) VALUES (?, ?, ?, ?, ?)', [request.form['activity'], str(datetime.date.today()), time, exp, session['user_id']])
         g.db.commit()
+        
+        ''' add up exp '''
+        s = getOneSkill(a['skill_id'])
+        skillExp = s['exp'] + exp
+        g.db.execute("UPDATE skills SET exp=? WHERE id=? AND user_id=?", [skillExp, s['id'], s['user_id']])
+        g.db.commit()
+        
+        ''' check skill level up '''
+        checkSkillLevelUp(s['id'])
+        
         flash('New entry was successfully posted!')
         return redirect(url_for('show_logs'))
     except MissingParamException:
@@ -204,11 +214,8 @@ def delete_log(l_id):
 @app.route('/activities')
 @login_required
 def show_activities():
-    a = g.db.execute("SELECT * FROM activities WHERE active=1 AND user_id=%s" % session['user_id'])
-    activities = a.fetchall()
-    s = g.db.execute("SELECT * FROM skills WHERE active=1 AND user_id=%s" % session['user_id'])
-    skills = s.fetchall()
-    
+    activities = getAllActivities()
+    skills = getAllSkills()
     user = getUser()
     
     return render_template('activities/show_activities.html', users=user, activities=activities, skills=skills)
@@ -219,11 +226,12 @@ def show_a(a_id=None):
     ''' list all current logs'''
     if a_id==None:
         redirect(url_for('activities'))
-    activities = g.db.execute("SELECT id, name, skill_id FROM activities WHERE id = %s AND active=1 AND user_id=%s" % (a_id, session['user_id']))
-    a = activities.fetchone()
+    
+    a = getOneActivity(a_id)
     app.logger.info("Showing activity: %s" % a)
-    skills = g.db.execute("SELECT * FROM skills WHERE id=%s AND active=1 AND user_id=%s" % (a['skill_id'], session['user_id']))
-    s = skills.fetchone()
+    
+    s = getOneSkill(a['skill_id'])
+    
     logs = g.db.execute("SELECT * FROM logs WHERE activity_id=%s AND user_id=%s" % (a['id'], session['user_id']))
     l = logs.fetchall()
     
@@ -240,17 +248,9 @@ def add_activity():
         difficulty = request.form['difficulty']
         skill = request.form['skill']
         sessions = request.form['sessions']
-        if name=='':
-            app.logger.info("Exception raised: no name")
-            raise MissingParamException
-        if difficulty=='':
-            app.logger.info("Exception raised: no difficulty")
-            raise MissingParamException 
-        if skill=='':
-            app.logger.info("Exception raised: no skill")
-            raise MissingParamException
-        if sessions=='':
-            app.logger.info("Exception raised: no sessions")
+        if name=='' or difficulty=='' or skill=='' or sessions=='':
+            app.logger.info("Exception raised: missing parameter")
+            app.logger.info(request.form)
             raise MissingParamException
         check = g.db.execute("SELECT name FROM activities WHERE name='%s'" % name.lower())
         if check.fetchone() is not None:
@@ -273,6 +273,10 @@ def delete_activity(a_id):
     app.logger.info("Activity %s deactivated" % a_id)
     flash("Activity deleted")
     return redirect(url_for('show_activities'))
+
+@app.route('/edit_activity/<a_id>', methods=['POST'])
+def edit_activity(a_id):
+    pass
     
     
     
@@ -282,8 +286,7 @@ def delete_activity(a_id):
 @app.route('/skills')
 @login_required
 def show_skills():
-    s = g.db.execute("SELECT * FROM skills WHERE active=1 AND user_id=%s" % session['user_id'])
-    skills = s.fetchall()
+    skills = getAllSkills()
     
     user = getUser()
     
@@ -295,8 +298,9 @@ def show_s(s_id=None):
     ''' list all activities '''
     if s_id==None:
         redirect(url_for('skills'))
-    skills = g.db.execute("SELECT id, name FROM skills WHERE id = %s AND active=1 AND user_id=%s" % (s_id, session['user_id']))
-    s = skills.fetchone()
+    
+    s = getOneSkill(s_id)
+    
     activities = g.db.execute("SELECT * FROM activities WHERE skill_id = %s AND active=1 AND user_id=%s" % (s['id'], session['user_id']))
     
     user = getUser()
@@ -319,7 +323,7 @@ def add_skill():
             return redirect(url_for('show_skills'))
         
         app.logger.info("User id: %s" % session['user_id'])
-        g.db.execute('INSERT INTO skills (name, user_id, active) VALUES (?, ?, ?)', [name.lower(), session['user_id'], 1])
+        g.db.execute('INSERT INTO skills (name, user_id, active, level, exp) VALUES (?, ?, ?, ?, ?)', [name.lower(), session['user_id'], 1, 1, 0])
         g.db.commit()
         flash('New skill successfully added!')
         return redirect(url_for('show_skills'))
@@ -344,47 +348,112 @@ def delete_skill(s_id):
     flash("Skill deleted")
     return redirect(url_for('show_skills'))
 
+@app.route('/edit_skill/<s_id>', methods=['POST'])
+@login_required
+def edit_skill(s_id):
+    g.db.execute("UPDATE skills SET name=? WHERE id=? AND user_id=?", [request.form['name'], s_id, session['user_id']])
+    g.db.commit()
+    return redirect('/skill/%s' % s_id)
+
 
 
 
 
 
 '''HELPERS'''
+def getOneSkill(s_id):
+    s = g.db.execute("SELECT * FROM skills WHERE id=%s AND user_id=%s AND active=1" % (s_id, session['user_id']))
+    skill = s.fetchone()
+    return skill
+
+def getAllSkills():
+    s = g.db.execute("SELECT * FROM skills WHERE user_id=%s AND active=1" % session['user_id'])
+    skills = s.fetchall()
+    return skills
+    
+def getOneActivity(a_id):
+    a = g.db.execute("SELECT * FROM activities WHERE id=%s AND user_id=%s AND active=1" % (a_id, session['user_id']))
+    activity = a.fetchone()
+    return activity
+
+def getAllActivities():
+    a = g.db.execute("SELECT * FROM activities WHERE user_id=%s AND active=1" % session['user_id'])
+    activities = a.fetchall()
+    return activities
+
+# def getAllLogs():
+#     l = g.db.execute("SELECT * FROM logs WHERE user_id=%s" % session['user_id'])
+#     logs = l.fetchall()
+#     return logs
+
+
 def getUser():
     users = g.db.execute("SELECT * FROM users WHERE id=%s" % session['user_id'])
     user = users.fetchone()
     app.logger.info(user)
-    if user is None:
-        g.db.execute("INSERT INTO users (id, name, password, level, exp) VALUES (1, 'admin', 'password', 1, 0)")
-        g.db.commit()
-        users = g.db.execute("SELECT * FROM users WHERE id=%s" % 1)
-        user = users.fetchone()
-        app.logger.info(user)
+#     if user is None:
+#         g.db.execute("INSERT INTO users (id, name, password, level, exp) VALUES (1, 'admin', 'password', 1, 0)")
+#         g.db.commit()
+#         users = g.db.execute("SELECT * FROM users WHERE id=%s" % 1)
+#         user = users.fetchone()
+#         app.logger.info(user)
     return user    
 
-def checkLevelUp():
-    users = g.db.execute("SELECT * FROM users WHERE id=%s" % session['user_id'])
-    user = users.fetchone()
-    level = user['level']
-    app.logger.info("Checking if level %s user levels up" % level)
-    ''' create level guide'''
+def checkSkillLevelUp(s_id):
+    skill = getOneSkill(s_id)
+    app.logger.info("Checking if skill %s at level %s levels up" % (skill['name'], skill['level']))
+    level = skill['level']
     total = 100
     diff = 0
     import math
     l = [0, 0, 100]
     for i in range(100):
-        diff = round(125 + math.pow(2.0, (i/2.0)))
+        diff = round(125 + math.pow(2.0, (i/2.5)))
+        total += diff
+        l.append(total)
+        
+    app.logger.info("Current skill exp: %s, Exp req for level up: %s" % (skill['exp'], l[level+1]))
+    
+    while skill['exp'] > l[level+1]:
+        skill['level'] += 1
+        app.logger.info('Level up! %s move from levels %s => %s' % (skill['name'], level, level+1))
+        g.db.execute("UPDATE skills SET level=? WHERE id=? AND active=1 AND user_id=?", [skill['level'], skill['id'], session['user_id']])
+        g.db.commit()
+        
+        user = getUser()
+        user['exp']+= skill['level']
+        g.db.execute("UPDATE users SET exp=? WHERE id=?", (user['exp'], user['id']))
+        g.db.commit()
+        checkLevelUp()
+        
+        level += 1
+        
+    
+    
+def checkLevelUp():
+    user = getUser()
+    level = user['level']
+    app.logger.info("Checking if level %s user levels up" % level)
+    ''' create level guide'''
+    total = 5
+    diff = 0
+    import math
+    l = [0, 0, 100]
+    for i in range(100):
+        diff = round(5 + math.pow(2.0, (i/3.0)))
         total += diff
         l.append(total)
     
     app.logger.info("Current exp: %s, Exp req for level up: %s" % (user['exp'], l[level+1]))
         
-    if user['exp'] > l[level+1]:
+    while user['exp'] > l[level+1]:
         user['level'] += 1
         app.logger.info('Level up! Move from levels %s => %s' % (level, level+1))
         
-    g.db.execute("UPDATE users SET level=? WHERE id=?", (user['level'], user['id']))
-    g.db.commit()
+        g.db.execute("UPDATE users SET level=? WHERE id=?", (user['level'], user['id']))
+        g.db.commit()
+        
+        level += 1
         
     
 def get_activity_name(a_id):

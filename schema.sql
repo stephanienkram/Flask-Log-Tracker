@@ -12,7 +12,9 @@ create table skills (
 id integer primary key autoincrement,
 user_id integer not null,
 name string not null,
-active integer not null
+active integer not null,
+level integer not null,
+exp integer not null
 );
 
 drop table if exists activities;
