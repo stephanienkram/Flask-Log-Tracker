@@ -74,6 +74,10 @@ def login_required(test):
 class MissingParamException(Exception):
     def __init__(self):
         print "form fields empty"
+        
+class NameLengthException(Exception):
+    def __init__(self):
+        print "Name length too long"
     
     
     
@@ -255,6 +259,10 @@ def add_activity():
             app.logger.info("Exception raised: missing parameter")
             app.logger.info(request.form)
             raise MissingParamException
+        if len(name) > 30:
+            app.logger.info("Name too long")
+            app.logger.info(name)
+            raise NameLengthException
         check = g.db.execute("SELECT name FROM activities WHERE name='%s'" % name.lower())
         if check.fetchone() is not None:
             flash('That activity already exists')
@@ -265,6 +273,9 @@ def add_activity():
         return redirect(url_for('show_activities'))
     except MissingParamException:
         flash('All fields must be filled')
+        return redirect(url_for('show_activities'))
+    except NameLengthException:
+        flash('Names can be no longer than 30 characters')
         return redirect(url_for('show_activities'))
     
 @app.route('/delete_activity/<a_id>', methods=['POST'])
@@ -317,6 +328,10 @@ def add_skill():
         name = request.form['name']
         if name==None or name=='':
             raise MissingParamException
+        if len(name) > 20:
+            app.logger.info("Name too long")
+            app.logger.info(name)
+            raise NameLengthException
         ''' check and see if skill is already in the db'''
         check = g.db.execute("SELECT name FROM skills WHERE name='%s' AND active=1 AND user_id=%s" % (name.lower(), session['user_id']))
         if check.fetchone() is not None:
@@ -332,6 +347,9 @@ def add_skill():
         return redirect(url_for('show_skills'))
     except MissingParamException:
         flash('All fields must be filled')
+        return redirect(url_for('show_skills'))
+    except NameLengthException:
+        flash('Names can be no longer than 20 characters')
         return redirect(url_for('show_skills'))
     
 @app.route('/delete_skill/<s_id>', methods=['POST'])
@@ -424,7 +442,7 @@ def checkSkillLevelUp(s_id):
         g.db.commit()
         
         user = getUser()
-        user['exp']+= skill['level']
+        user['exp']+= skill['exp']
         g.db.execute("UPDATE users SET exp=? WHERE id=?", (user['exp'], user['id']))
         g.db.commit()
         checkLevelUp()
@@ -438,12 +456,12 @@ def checkLevelUp():
     level = user['level']
     app.logger.info("Checking if level %s user levels up" % level)
     ''' create level guide'''
-    total = 5
+    total = 100
     diff = 0
     import math
     l = [0, 0, 100]
     for i in range(100):
-        diff = round(5 + math.pow(2.0, (i/3.0)))
+        diff = round(125 + math.pow(2.0, (i/2.0)))
         total += diff
         l.append(total)
     
